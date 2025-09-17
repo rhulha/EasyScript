@@ -12,7 +12,8 @@ Features:
 - Python-style boolean operators (and, or) with JS alternatives (&&, ||)
 - Object property access with dot notation (user.cn, user.mail)
 - Built-in variables: day, month, year, user
-- Built-in functions: len()
+- Built-in functions: len(), log()
+- Regex matching with ~ operator (string ~ pattern)
 - Optional return keyword in conditionals
 - Support for both True/False and true/false
 """
@@ -166,7 +167,7 @@ class EasyScriptEvaluator:
                 tokens.append(Token(TokenType.COMMA, ',', i))
             elif code[i] == '.':
                 tokens.append(Token(TokenType.DOT, '.', i))
-            elif code[i] in '+-*/><!':
+            elif code[i] in '+-*/><!~':
                 tokens.append(Token(TokenType.OPERATOR, code[i], i))
 
             i += 1
@@ -211,7 +212,7 @@ class EasyScriptEvaluator:
     def parse_comparison(self) -> Any:
         left = self.parse_additive()
 
-        while self.current_token().type == TokenType.OPERATOR and self.current_token().value in ['>', '<', '>=', '<=', '==', '!=']:
+        while self.current_token().type == TokenType.OPERATOR and self.current_token().value in ['>', '<', '>=', '<=', '==', '!=', '~']:
             op = self.current_token().value
             self.consume_token()
             right = self.parse_additive()
@@ -228,6 +229,16 @@ class EasyScriptEvaluator:
                 left = left == right
             elif op == '!=':
                 left = left != right
+            elif op == '~':
+                # Regex matching: left ~ right (string matches pattern)
+                if not isinstance(left, str):
+                    left = str(left)
+                if not isinstance(right, str):
+                    raise TypeError(f"Regex pattern must be a string, got {type(right).__name__}")
+                try:
+                    left = bool(re.search(right, left))
+                except re.error as e:
+                    raise ValueError(f"Invalid regex pattern '{right}': {e}")
 
         return left
 
@@ -340,6 +351,12 @@ class EasyScriptEvaluator:
             if len(args) != 1:
                 raise TypeError(f"len() takes exactly one argument ({len(args)} given)")
             return len(args[0])
+        elif function_name == 'log':
+            if len(args) != 1:
+                raise TypeError(f"log() takes exactly one argument ({len(args)} given)")
+            value = args[0]
+            print(value)
+            return value
         else:
             raise NameError(f"Function '{function_name}' is not defined")
 

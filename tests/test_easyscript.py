@@ -65,6 +65,19 @@ def test_easyscript():
     # Conditional with variables
     print(f"if month > 6: return \"Second half\": {evaluator.evaluate('if month > 6: return \"Second half\"')}")
 
+    # Test log function
+    print(f"\nTesting log function:")
+    print(f"log(\"Hello World\"): {evaluator.evaluate('log(\"Hello World\")')}")
+    print(f"log(42): {evaluator.evaluate('log(42)')}")
+    print(f"log(day): {evaluator.evaluate('log(day)')}")
+
+    # Test regex operator
+    print(f"\nTesting regex operator (~):")
+    print(f'"hello" ~ "h.*o": {evaluator.evaluate('"hello" ~ "h.*o"')}')
+    print(f'"test123" ~ "[0-9]+": {evaluator.evaluate('"test123" ~ "[0-9]+"')}')
+    print(f'"abc" ~ "^[a-c]*$": {evaluator.evaluate('"abc" ~ "^[a-c]*$"')}')
+    print(f'"xyz" ~ "^[a-c]*$": {evaluator.evaluate('"xyz" ~ "^[a-c]*$"')}')
+
     print("\n=== All EasyScript Basic Tests Completed! ===")
 
 

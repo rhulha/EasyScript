@@ -9,7 +9,8 @@ A simple scripting language interpreter that blends Python and JavaScript syntax
 - **Flexible Boolean Operators**: Supports both Python (`and`, `or`) and JavaScript (`&&`, `||`) style operators
 - **Object Property Access**: Dot notation for accessing object properties (`user.cn`, `user.mail`)
 - **Built-in Variables**: Pre-defined variables for common use cases (`day`, `month`, `year`, `user`)
-- **Built-in Functions**: Essential functions like `len()`
+- **Built-in Functions**: Essential functions like `len()`, `log()`
+- **Regex Matching**: Pattern matching with `~` operator (`string ~ pattern`)
 - **Conditional Logic**: Support for `if` statements with optional `return` keyword
 - **Mixed Boolean Values**: Supports both `True/False` and `true/false`
 
@@ -36,6 +37,12 @@ result = evaluator.evaluate("year")  # Returns: current year
 # User object access
 result = evaluator.evaluate("user.cn")  # Returns: "John Doe"
 
+# Log function (prints and returns value)
+result = evaluator.evaluate('log("Debug info")')  # Prints: Debug info, Returns: "Debug info"
+
+# Regex matching
+result = evaluator.evaluate('user.mail ~ ".*@.*"')  # Returns: True
+
 # Conditional logic
 result = evaluator.evaluate('if len(user.cn) > 3: return true')  # Returns: True
 ```
@@ -52,11 +59,17 @@ result = evaluator.evaluate('if len(user.cn) > 3: return true')  # Returns: True
 "Hello " + "World"           // "Hello World"
 "Value: " + 42               // "Value: 42"
 len("Hello")                 // 5
+log("Debug: " + 42)          // Prints: Debug: 42, Returns: "Debug: 42"
 
 // Comparisons
 5 > 3                        // True
 "abc" == "abc"               // True
 len("test") >= 4             // True
+
+// Regex matching
+"hello" ~ "h.*o"             // True
+"test123" ~ "[0-9]+"         // True
+"email@domain.com" ~ ".*@.*" // True
 ```
 
 ### Boolean Logic
@@ -84,6 +97,8 @@ user.department              // "Engineering"
 // Use in expressions
 "Hello " + user.givenName    // "Hello John"
 len(user.uid) > 3            // True
+user.mail ~ ".*@.*"          // True (email validation)
+user.cn ~ "John.*"           // True (starts with "John")
 ```
 
 ### Conditional Statements
@@ -210,7 +225,13 @@ if month >= 6 and month <= 8: return "Summer greetings, " + user.givenName
 
 **Data Validation**:
 ```javascript
-if len(user.mail) > 5 and user.mail.indexOf("@") > 0: return true
+if len(user.mail) > 5 and user.mail ~ ".*@.*": return true
+```
+
+**Pattern Matching**:
+```javascript
+if user.uid ~ "^[a-z]+$": return "Valid username"
+if user.mail ~ ".*@company\.com$": return "Company email"
 ```
 
 **Configuration Logic**:

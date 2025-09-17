@@ -70,6 +70,18 @@ def test_easyscript_user_functionality():
     print(f'len(user.mail) > 10: {evaluator.evaluate("len(user.mail) > 10")}')
     print(f'len(user.uid) < 10: {evaluator.evaluate("len(user.uid) < 10")}')
 
+    # Test log function with user data
+    print(f"\nTesting log function with user data:")
+    print(f'log(user.cn): {evaluator.evaluate("log(user.cn)")}')
+    print(f'log("User: " + user.givenName): {evaluator.evaluate('log("User: " + user.givenName)')}')
+
+    # Test regex operator with user data
+    print(f"\nTesting regex operator with user data:")
+    print(f'user.mail ~ ".*@.*": {evaluator.evaluate('user.mail ~ ".*@.*"')}')
+    print(f'user.cn ~ "John.*": {evaluator.evaluate('user.cn ~ "John.*"')}')
+    print(f'user.department ~ "^[A-Z]": {evaluator.evaluate('user.department ~ "^[A-Z]"')}')
+    print(f'user.uid ~ "^[a-z]+$": {evaluator.evaluate('user.uid ~ "^[a-z]+$"')}')
+
     print("\n=== All EasyScript User Tests Completed! ===")
 
 
