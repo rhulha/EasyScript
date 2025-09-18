@@ -1,12 +1,23 @@
 from setuptools import setup, find_packages
+import re
+from pathlib import Path
 
 # Read the README file for the long description
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+# Read version from __init__.py
+def get_version():
+    init_file = Path(__file__).parent / "easyscript" / "__init__.py"
+    content = init_file.read_text(encoding='utf-8')
+    match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
+    if not match:
+        raise RuntimeError("Unable to find version string in __init__.py")
+    return match.group(1)
+
 setup(
     name="easyscript",
-    version="0.5.0",
+    version=get_version(),
     author="EasyScript",
     author_email="java4life@gmail.com",
     description="A simple scripting language that blends Python and JavaScript syntax",
@@ -32,6 +43,11 @@ setup(
     install_requires=[
         # No external dependencies
     ],
+    entry_points={
+        'console_scripts': [
+            'easyscript=easyscript.__main__:main',
+        ],
+    },
     extras_require={
         "dev": [
             "pytest>=6.0",
