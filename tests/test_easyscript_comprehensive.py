@@ -103,6 +103,49 @@ class TestEasyScriptBasics(unittest.TestCase):
             ("true or false", True),
             ("false or true", True),
             ("false or false", False),
+            # Test not operator
+            ("not true", False),
+            ("not false", True),
+            ("not True", False),
+            ("not False", True),
+            # Test not with expressions
+            ("not (3 > 5)", True),
+            ("not (5 > 3)", False),
+            # Test double not
+            ("not not true", True),
+            ("not not false", False),
+            # Test not with other operators (precedence)
+            ("not true and false", False),  # Should be (not true) and false
+            ("not true or false", False),   # Should be (not true) or false
+            ("true and not false", True),   # Should be true and (not false)
+            ("not (true and false)", True), # Should be not (true and false)
+            ("not (true or false)", False), # Should be not (true or false)
+        ]
+        
+        for expression, expected in test_cases:
+            with self.subTest(expression=expression):
+                result = self.evaluator.evaluate(expression)
+                self.assertEqual(result, expected)
+
+    def test_not_operator_with_data_types(self):
+        """Test not operator with different data types"""
+        test_cases = [
+            # Numbers (0 is falsy, non-zero is truthy)
+            ("not 0", True),
+            ("not 1", False),
+            ("not -1", False),
+            ("not 42", False),
+            ("not 0.0", True),
+            ("not 3.14", False),
+            # Strings (empty string is falsy, non-empty is truthy)
+            ('not ""', True),
+            ('not "hello"', False),
+            ('not " "', False),  # Space is not empty
+            # Complex expressions
+            ("not (5 - 5)", True),   # 5 - 5 = 0, which is falsy
+            ("not (3 + 2)", False),  # 3 + 2 = 5, which is truthy
+            ('not len("")', True),   # len("") = 0, which is falsy
+            ('not len("hi")', False), # len("hi") = 2, which is truthy
         ]
         
         for expression, expected in test_cases:

@@ -9,7 +9,7 @@ EasyScript is designed to be an easy-to-use scripting language for:
 
 Features:
 - JavaScript-style string concatenation (string + number)
-- Python-style boolean operators (and, or)
+- Python-style boolean operators (and, or, not)
 - Object property access with dot notation (user.cn, user.mail)
 - Built-in variables: day, month, year
 - Built-in functions: len(), log()
@@ -350,13 +350,17 @@ class EasyScriptEvaluator:
         return left
 
     def parse_unary(self) -> Any:
-        """Handle unary operators like negative numbers"""
+        """Handle unary operators like negative numbers and logical not"""
         token = self.current_token()
         
         if token.type == TokenType.OPERATOR and token.value == '-':
             self.consume_token()
             # Recursively parse the right side and negate it
             return -self.parse_unary()
+        elif token.type == TokenType.KEYWORD and token.value == 'not':
+            self.consume_token()
+            # Recursively parse the right side and apply logical not
+            return not self.parse_unary()
         else:
             return self.parse_primary()
 

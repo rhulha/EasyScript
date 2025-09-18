@@ -6,7 +6,7 @@ A simple scripting language interpreter that blends Python and JavaScript syntax
 
 - **Hybrid Syntax**: Combines the best of Python and JavaScript syntax
 - **JavaScript-style String Concatenation**: Automatic string conversion (e.g., `"hello" + 5` → `"hello5"`)
-- **Python-style Boolean Operators**: Supports `and` and `or` operators
+- **Python-style Boolean Operators**: Supports `and`, `or`, and `not` operators
 - **Object Property Access**: Dot notation for accessing object properties (`user.cn`, `user.mail`)
 - **Built-in Variables**: Pre-defined variables (`day`, `month`, `year`) with support for object injection
 - **Built-in Functions**: Essential functions like `len()`, `log()`
@@ -85,17 +85,20 @@ len("test") >= 4             // True
 
 ### Boolean Logic
 ```javascript
-// Python-style
+// Python-style boolean operators
 true and false               // False
 true or false                // True
+not true                     // False
+not false                    // True
 
-// JavaScript-style
-true && false                // False
-true || false                // True
+// Operator precedence (not has higher precedence)
+not true and false           // False (equivalent to: (not true) and false)
+not (true and false)         // True
 
 // Mixed case support
 True and False               // False
 true and False               // False
+not True                     // False
 ```
 
 ### Comments

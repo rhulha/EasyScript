@@ -20,6 +20,7 @@ len("EasyScript")
 # Boolean operations (Python style)
 log("=== Boolean Operations ===")
 true and false or true
+not false and true
 
 # Regex matching
 log("=== Regex Matching ===")
