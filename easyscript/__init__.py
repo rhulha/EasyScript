@@ -6,7 +6,7 @@ A lightweight interpreter for business rules, data validation, and scripting tas
 
 from .easyscript import EasyScriptEvaluator
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 __author__ = "EasyScript"
 __email__ = "java4life@gmail.com"
 
