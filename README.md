@@ -8,7 +8,7 @@ A simple scripting language interpreter that blends Python and JavaScript syntax
 - **JavaScript-style String Concatenation**: Automatic string conversion (e.g., `"hello" + 5` → `"hello5"`)
 - **Flexible Boolean Operators**: Supports both Python (`and`, `or`) and JavaScript (`&&`, `||`) style operators
 - **Object Property Access**: Dot notation for accessing object properties (`user.cn`, `user.mail`)
-- **Built-in Variables**: Pre-defined variables for common use cases (`day`, `month`, `year`, `user`)
+- **Built-in Variables**: Pre-defined variables (`day`, `month`, `year`) with support for object injection
 - **Built-in Functions**: Essential functions like `len()`, `log()`
 - **Regex Matching**: Pattern matching with `~` operator (`string ~ pattern`)
 - **Conditional Logic**: Support for `if` statements with optional `return` keyword
@@ -34,17 +34,23 @@ result = evaluator.evaluate('"Count: " + 42')  # Returns: "Count: 42"
 # Built-in variables
 result = evaluator.evaluate("year")  # Returns: current year
 
-# User object access
-result = evaluator.evaluate("user.cn")  # Returns: "John Doe"
+# Object injection
+class User:
+    def __init__(self):
+        self.cn = "John Doe"
+        self.mail = "john@example.com"
+
+user = User()
+result = evaluator.evaluate("user.cn", {"user": user})  # Returns: "John Doe"
 
 # Log function (prints and returns value)
 result = evaluator.evaluate('log("Debug info")')  # Prints: Debug info, Returns: "Debug info"
 
 # Regex matching
-result = evaluator.evaluate('user.mail ~ ".*@.*"')  # Returns: True
+result = evaluator.evaluate('user.mail ~ ".*@.*"', {"user": user})  # Returns: True
 
 # Conditional logic
-result = evaluator.evaluate('if len(user.cn) > 3: return true')  # Returns: True
+result = evaluator.evaluate('if len(user.cn) > 3: return true', {"user": user})  # Returns: True
 ```
 
 ## Syntax Examples
@@ -87,18 +93,28 @@ True and False               // False
 true and False               // False
 ```
 
-### User Object Access
+### Object Injection and Access
 ```javascript
-// Access user properties
-user.cn                      // "John Doe"
-user.mail                    // "john.doe@company.com"
-user.department              // "Engineering"
+// Create and inject custom objects
+from easyscript import EasyScriptEvaluator
+
+class User:
+    def __init__(self):
+        self.cn = "John Doe"
+        self.mail = "john.doe@company.com"
+        self.department = "Engineering"
+
+user = User()
+evaluator = EasyScriptEvaluator()
+
+// Access injected object properties
+evaluator.evaluate("user.cn", {"user": user})                      // "John Doe"
+evaluator.evaluate("user.mail", {"user": user})                    // "john.doe@company.com"
 
 // Use in expressions
-"Hello " + user.givenName    // "Hello John"
-len(user.uid) > 3            // True
-user.mail ~ ".*@.*"          // True (email validation)
-user.cn ~ "John.*"           // True (starts with "John")
+evaluator.evaluate('"Hello " + user.cn', {"user": user})           // "Hello John Doe"
+evaluator.evaluate('len(user.mail) > 10', {"user": user})          // True
+evaluator.evaluate('user.mail ~ ".*@.*"', {"user": user})          // True (email validation)
 ```
 
 ### Conditional Statements
@@ -115,30 +131,13 @@ if user.department == "Engineering" and len(user.cn) > 3: true
 
 ## Built-in Variables
 
-EasyScript provides several built-in variables for common use cases:
+EasyScript provides several built-in variables:
 
 - `day`: Current day of the month
 - `month`: Current month (1-12)
 - `year`: Current year
-- `user`: LDAP-like user object with common attributes
 
-## User Object Attributes
-
-The built-in `user` object includes common LDAP/eDirectory attributes:
-
-- `cn`: Common Name (e.g., "John Doe")
-- `uid`: User ID (e.g., "jdoe")
-- `mail`: Email address
-- `givenName`: First name
-- `sn`: Surname/last name
-- `department`: Department name
-- `title`: Job title
-- `ou`: Organizational Unit
-- `telephoneNumber`: Phone number
-- `employeeNumber`: Employee ID
-- `manager`: Manager DN
-- `homeDirectory`: Home directory path
-- `loginShell`: Login shell
+Additional objects can be injected using the `variables` parameter.
 
 ## Use Cases
 
@@ -152,7 +151,11 @@ EasyScript is particularly useful for:
 
 ## Installation
 
-Simply download the `easyscript.py` file and import it into your Python project:
+Simply install the package or download the `easyscript.py` file:
+
+```bash
+pip install easyscript
+```
 
 ```python
 from easyscript import EasyScriptEvaluator
@@ -171,29 +174,56 @@ Run the included test suite to verify functionality:
 # Basic functionality tests
 python tests/test_easyscript.py
 
-# User object and LDAP functionality tests
+# Object injection examples (includes LDAPUser example class)
 python tests/test_easyscript_user.py
 
 # Or run all tests
 python -m pytest tests/
 ```
 
-## Custom Variables
+**Note:** The `LDAPUser` class used in tests is just an example of object injection and is located in `tests/test_helpers.py`. It's not part of the main library.
 
-You can provide custom variables when evaluating expressions:
+## Object Injection
+
+EasyScript's power comes from injecting your own objects and data:
 
 ```python
+from easyscript import EasyScriptEvaluator
+
 evaluator = EasyScriptEvaluator()
 
-# Add custom variables
-custom_vars = {
-    'name': 'Alice',
-    'age': 30,
-    'config': {'debug': True}
+# Inject any Python object
+class Config:
+    def __init__(self):
+        self.debug = True
+        self.api_url = "https://api.example.com"
+
+class User:
+    def __init__(self, name, email):
+        self.name = name
+        self.email = email
+        self.active = True
+
+# Create instances
+config = Config()
+user = User("Alice", "alice@company.com")
+
+# Inject multiple objects
+variables = {
+    'config': config,
+    'user': user,
+    'version': '1.0'
 }
 
-result = evaluator.evaluate('"User: " + name', variables=custom_vars)
-# Returns: "User: Alice"
+# Use in expressions
+result = evaluator.evaluate('user.name + " - " + config.api_url', variables)
+# Returns: "Alice - https://api.example.com"
+
+result = evaluator.evaluate('if user.active and config.debug: "Debug mode"', variables)
+# Returns: "Debug mode"
+
+result = evaluator.evaluate('user.email ~ ".*@company\.com"', variables)
+# Returns: True
 ```
 
 ## Contributing
@@ -224,14 +254,18 @@ if month >= 6 and month <= 8: return "Summer greetings, " + user.givenName
 ```
 
 **Data Validation**:
-```javascript
-if len(user.mail) > 5 and user.mail ~ ".*@.*": return true
+```python
+# Inject user object
+user = User("john", "john@company.com")
+variables = {"user": user}
+
+result = evaluator.evaluate('if len(user.mail) > 5 and user.mail ~ ".*@.*": return true', variables)
 ```
 
 **Pattern Matching**:
-```javascript
-if user.uid ~ "^[a-z]+$": return "Valid username"
-if user.mail ~ ".*@company\.com$": return "Company email"
+```python
+result = evaluator.evaluate('if user.username ~ "^[a-z]+$": return "Valid username"', variables)
+result = evaluator.evaluate('if user.mail ~ ".*@company\.com$": return "Company email"', variables)
 ```
 
 **Configuration Logic**:
