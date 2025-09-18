@@ -13,6 +13,7 @@ A simple scripting language interpreter that blends Python and JavaScript syntax
 - **Regex Matching**: Pattern matching with `~` operator (`string ~ pattern`)
 - **Conditional Logic**: Support for `if` statements with optional `return` keyword
 - **Mixed Boolean Values**: Supports both `True/False` and `true/false`
+- **Comments**: Python-style comments using `#` character (everything after `#` is ignored)
 
 ## Quick Start
 
@@ -51,6 +52,10 @@ result = evaluator.evaluate('user.mail ~ ".*@.*"', {"user": user})  # Returns: T
 
 # Conditional logic
 result = evaluator.evaluate('if len(user.cn) > 3: return true', {"user": user})  # Returns: True
+
+# Comments in expressions
+result = evaluator.evaluate('5 + 3 # This is a comment')  # Returns: 8
+result = evaluator.evaluate('len("hello") # Get string length')  # Returns: 5
 ```
 
 ## Syntax Examples
@@ -91,6 +96,26 @@ true || false                // True
 // Mixed case support
 True and False               // False
 true and False               // False
+```
+
+### Comments
+```javascript
+// Python-style comments using #
+5 + 3 # This is a comment
+"hello" + "world" # Comments can appear at end of line
+
+# Full line comments are supported
+5 + 3  # Result: 8
+
+# Multiple comments work fine
+# This is comment line 1
+# This is comment line 2
+5 * 2  # Result: 10
+
+// Comments in multi-line expressions
+5 # first number
++ 3 # second number
+* 2 # multiply result
 ```
 
 ### Object Injection and Access

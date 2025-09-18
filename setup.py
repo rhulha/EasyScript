@@ -1,11 +1,12 @@
 from setuptools import setup, find_packages
 
+# Read the README file for the long description
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
     name="easyscript",
-    version="0.3.0",
+    version="0.5.0",
     author="EasyScript",
     author_email="java4life@gmail.com",
     description="A simple scripting language that blends Python and JavaScript syntax",

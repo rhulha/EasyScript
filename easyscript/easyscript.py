@@ -34,6 +34,8 @@ class TokenType(Enum):
     KEYWORD = "KEYWORD"
     LPAREN = "LPAREN"
     RPAREN = "RPAREN"
+    LBRACKET = "LBRACKET"
+    RBRACKET = "RBRACKET"
     COLON = "COLON"
     COMMA = "COMMA"
     DOT = "DOT"
@@ -108,6 +110,15 @@ class EasyScriptEvaluator:
                     tokens.append(Token(TokenType.IDENTIFIER, value, start))
                 continue
 
+            # Comments - skip everything after # until end of line
+            if code[i] == '#':
+                # Skip to end of line or end of code
+                while i < len(code) and code[i] != '\n':
+                    i += 1
+                # Don't increment i again at the end of the loop, 
+                # as we either reached end of code or are at newline
+                continue
+
             # Two-character operators
             if i < len(code) - 1:
                 two_char = code[i:i+2]
@@ -127,6 +138,10 @@ class EasyScriptEvaluator:
                 tokens.append(Token(TokenType.LPAREN, '(', i))
             elif code[i] == ')':
                 tokens.append(Token(TokenType.RPAREN, ')', i))
+            elif code[i] == '[':
+                tokens.append(Token(TokenType.LBRACKET, '[', i))
+            elif code[i] == ']':
+                tokens.append(Token(TokenType.RBRACKET, ']', i))
             elif code[i] == ':':
                 tokens.append(Token(TokenType.COLON, ':', i))
             elif code[i] == ',':
@@ -324,12 +339,12 @@ class EasyScriptEvaluator:
         return left
 
     def parse_multiplicative(self) -> Any:
-        left = self.parse_primary()
+        left = self.parse_unary()
 
         while self.current_token().type == TokenType.OPERATOR and self.current_token().value in ['*', '/']:
             op = self.current_token().value
             self.consume_token()
-            right = self.parse_primary()
+            right = self.parse_unary()
 
             if op == '*':
                 left = left * right
@@ -338,24 +353,36 @@ class EasyScriptEvaluator:
 
         return left
 
+    def parse_unary(self) -> Any:
+        """Handle unary operators like negative numbers"""
+        token = self.current_token()
+        
+        if token.type == TokenType.OPERATOR and token.value == '-':
+            self.consume_token()
+            # Recursively parse the right side and negate it
+            return -self.parse_unary()
+        else:
+            return self.parse_primary()
+
     def parse_primary(self) -> Any:
         token = self.current_token()
+        result = None
 
         if token.type == TokenType.NUMBER:
             self.consume_token()
-            return token.value
+            result = token.value
 
         elif token.type == TokenType.STRING:
             self.consume_token()
-            return token.value
+            result = token.value
 
         elif token.type == TokenType.KEYWORD:
             if token.value in ['True', 'true']:
                 self.consume_token()
-                return True
+                result = True
             elif token.value in ['False', 'false']:
                 self.consume_token()
-                return False
+                result = False
 
         elif token.type == TokenType.IDENTIFIER:
             name = token.value
@@ -363,39 +390,98 @@ class EasyScriptEvaluator:
 
             # Check for function call
             if self.current_token().type == TokenType.LPAREN:
-                return self.parse_function_call(name)
-
-            # Check for property access (dot notation)
-            obj = None
-            if name in self.variables:
-                obj = self.variables[name]
+                result = self.parse_function_call(name)
             else:
-                raise NameError(f"Variable '{name}' is not defined")
-
-            # Handle property access chain (e.g., user.cn, user.mail)
-            while self.current_token().type == TokenType.DOT:
-                self.consume_token()  # consume '.'
-                if self.current_token().type != TokenType.IDENTIFIER:
-                    raise SyntaxError("Expected property name after '.'")
-
-                property_name = self.current_token().value
-                self.consume_token()
-
-                if hasattr(obj, property_name):
-                    obj = getattr(obj, property_name)
+                # Check for property access (dot notation)
+                if name in self.variables:
+                    obj = self.variables[name]
                 else:
-                    raise AttributeError(f"Object has no attribute '{property_name}'")
+                    raise NameError(f"Variable '{name}' is not defined")
 
-            return obj
+                # Handle property access chain (e.g., user.cn, user.mail)
+                while self.current_token().type == TokenType.DOT:
+                    self.consume_token()  # consume '.'
+                    if self.current_token().type != TokenType.IDENTIFIER:
+                        raise SyntaxError("Expected property name after '.'")
+
+                    property_name = self.current_token().value
+                    self.consume_token()
+
+                    if hasattr(obj, property_name):
+                        obj = getattr(obj, property_name)
+                    else:
+                        raise AttributeError(f"Object has no attribute '{property_name}'")
+
+                result = obj
 
         elif token.type == TokenType.LPAREN:
             self.consume_token()
             result = self.parse_expression()
             if self.current_token().type == TokenType.RPAREN:
                 self.consume_token()
-            return result
+            # result is already set
 
-        raise SyntaxError(f"Unexpected token: {token.value}")
+        if result is None:
+            raise SyntaxError(f"Unexpected token: {token.value}")
+
+        # Handle indexing and slicing for any result (numbers, strings, lists, etc.)
+        while self.current_token().type == TokenType.LBRACKET:
+            result = self.parse_indexing_or_slicing(result)
+
+        return result
+
+    def parse_indexing_or_slicing(self, obj: Any) -> Any:
+        """Parse indexing (a[0]) or slicing (a[1:3], a[:5], a[2:]) operations"""
+        self.consume_token()  # consume '['
+        
+        # Check if the object is subscriptable
+        if not hasattr(obj, '__getitem__'):
+            raise TypeError(f"'{type(obj).__name__}' object is not subscriptable")
+        
+        # Check if the first token is a colon (e.g., [:5])
+        if self.current_token().type == TokenType.COLON:
+            # This is a slice with no start index: [:end]
+            self.consume_token()  # consume ':'
+            
+            if self.current_token().type == TokenType.RBRACKET:
+                # This is just [:] - slice everything
+                self.consume_token()  # consume ']'
+                return obj[:]
+            else:
+                # Parse the end index - use parse_or_expression to avoid issues with :-
+                end_expr = self.parse_or_expression()
+                if self.current_token().type == TokenType.RBRACKET:
+                    self.consume_token()  # consume ']'
+                    return obj[:end_expr]
+                else:
+                    raise SyntaxError("Expected ']' after slice end index")
+        
+        # Parse the first expression (could be index or start of slice)
+        first_expr = self.parse_or_expression()
+        
+        # Check if this is a slice (contains colon)
+        if self.current_token().type == TokenType.COLON:
+            self.consume_token()  # consume ':'
+            
+            if self.current_token().type == TokenType.RBRACKET:
+                # This is a slice with no end index: [start:]
+                self.consume_token()  # consume ']'
+                return obj[first_expr:]
+            else:
+                # Parse the end index: [start:end] - use parse_or_expression to avoid issues with :-
+                end_expr = self.parse_or_expression()
+                if self.current_token().type == TokenType.RBRACKET:
+                    self.consume_token()  # consume ']'
+                    return obj[first_expr:end_expr]
+                else:
+                    raise SyntaxError("Expected ']' after slice end index")
+        else:
+            # This is simple indexing: [index]
+            if self.current_token().type == TokenType.RBRACKET:
+                self.consume_token()  # consume ']'
+                return obj[first_expr]
+            else:
+                raise SyntaxError("Expected ']' after index")
 
     def parse_function_call(self, function_name: str) -> Any:
         self.consume_token()  # consume '('

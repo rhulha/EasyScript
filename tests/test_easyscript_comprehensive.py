@@ -598,6 +598,160 @@ class TestEasyScriptIntegration(unittest.TestCase):
                 self.assertEqual(result, expected)
 
 
+class TestSliceOperations(unittest.TestCase):
+    """Test slice operator functionality"""
+
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        self.evaluator = EasyScriptEvaluator()
+
+    def test_string_slicing(self):
+        """Test string slicing operations"""
+        test_string = "hello world"
+        variables = {"text": test_string}
+        
+        test_cases = [
+            # Basic indexing
+            ("text[0]", "h"),
+            ("text[1]", "e"),
+            ("text[-1]", "d"),
+            ("text[6]", "w"),
+            
+            # Slice with start and end
+            ("text[0:5]", "hello"),
+            ("text[6:11]", "world"),
+            ("text[1:4]", "ell"),
+            ("text[0:2]", "he"),
+            ("text[1:-1]", "ello worl"),  # From index 1 to second-to-last
+            
+            # Slice with no start ([:end])
+            ("text[:5]", "hello"),
+            ("text[:2]", "he"),
+            ("text[:0]", ""),
+            
+            # Slice with no end ([start:])
+            ("text[6:]", "world"),
+            ("text[1:]", "ello world"),
+            ("text[0:]", "hello world"),
+            
+            # Full slice
+            ("text[:]", "hello world"),
+        ]
+        
+        for expression, expected in test_cases:
+            with self.subTest(expression=expression):
+                result = self.evaluator.evaluate(expression, variables)
+                self.assertEqual(result, expected)
+
+    def test_list_slicing(self):
+        """Test list slicing operations"""
+        test_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        variables = {"numbers": test_list}
+        
+        test_cases = [
+            # Basic indexing
+            ("numbers[0]", 1),
+            ("numbers[4]", 5),
+            ("numbers[-1]", 10),
+            ("numbers[9]", 10),
+            
+            # Slice with start and end
+            ("numbers[0:3]", [1, 2, 3]),
+            ("numbers[2:5]", [3, 4, 5]),
+            ("numbers[1:4]", [2, 3, 4]),
+            ("numbers[1:-1]", [2, 3, 4, 5, 6, 7, 8, 9]),  # From index 1 to second-to-last
+            
+            # Slice with no start ([:end])
+            ("numbers[:3]", [1, 2, 3]),
+            ("numbers[:5]", [1, 2, 3, 4, 5]),
+            ("numbers[:0]", []),
+            
+            # Slice with no end ([start:])
+            ("numbers[7:]", [8, 9, 10]),
+            ("numbers[3:]", [4, 5, 6, 7, 8, 9, 10]),
+            ("numbers[0:]", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+            
+            # Full slice
+            ("numbers[:]", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+        ]
+        
+        for expression, expected in test_cases:
+            with self.subTest(expression=expression):
+                result = self.evaluator.evaluate(expression, variables)
+                self.assertEqual(result, expected)
+
+    def test_complex_slice_expressions(self):
+        """Test slicing with complex expressions for indices"""
+        variables = {
+            "text": "programming",
+            "numbers": [10, 20, 30, 40, 50],
+            "start": 2,
+            "end": 7,
+            "index": 3
+        }
+        
+        test_cases = [
+            # Using variables as indices
+            ("text[start]", "o"),
+            ("text[start:end]", "ogram"),
+            ("text[:end]", "program"),
+            ("text[start:]", "ogramming"),
+            ("numbers[index]", 40),
+            ("numbers[start:end]", [30, 40, 50]),
+            
+            # Using expressions as indices
+            ("text[1+1]", "o"),  # text[2]
+            ("text[start*2:end+1]", "ramm"),  # text[4:8]
+            ("numbers[index-1]", 30),  # numbers[2]
+            ("numbers[1:end-4]", [20, 30]),  # numbers[1:3]
+        ]
+        
+        for expression, expected in test_cases:
+            with self.subTest(expression=expression):
+                result = self.evaluator.evaluate(expression, variables)
+                self.assertEqual(result, expected)
+
+    def test_chained_operations(self):
+        """Test slicing combined with other operations"""
+        variables = {
+            "words": ["hello", "world", "python", "programming"],
+            "text": "EasyScript"
+        }
+        
+        test_cases = [
+            # Length of slice
+            ('len(text[2:6])', 4),  # len("ySc")
+            ('len(words[:2])', 2),  # len(["hello", "world"])
+            
+            # Slice of slice (chained slicing)
+            ('text[1:8][2:5]', "ySc"),  # "asyScri"[2:5]
+            
+            # Property access on sliced results
+            # Note: This would work if we had objects with properties in the list
+        ]
+        
+        for expression, expected in test_cases:
+            with self.subTest(expression=expression):
+                result = self.evaluator.evaluate(expression, variables)
+                self.assertEqual(result, expected)
+
+    def test_slice_error_handling(self):
+        """Test error handling for slice operations"""
+        variables = {"text": "hello", "numbers": [1, 2, 3]}
+        
+        # Test cases that should raise errors
+        error_cases = [
+            ("text[", SyntaxError),  # Incomplete syntax
+            ("text[1", SyntaxError),  # Missing closing bracket
+            ("5[0]", TypeError),  # Cannot index numbers
+        ]
+        
+        for expression, expected_error in error_cases:
+            with self.subTest(expression=expression):
+                with self.assertRaises(expected_error):
+                    self.evaluator.evaluate(expression, variables)
+
+
 if __name__ == '__main__':
     # Run all tests
     unittest.main(verbosity=2)
