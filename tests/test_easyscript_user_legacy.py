@@ -150,6 +150,60 @@ def test_custom_object_injection():
     print("\n=== Custom Object Injection Demo Completed! ===")
 
 
+def test_assignment_functionality():
+    """Test the new assignment functionality"""
+    
+    print("\n=== Assignment Functionality Tests ===\n")
+    
+    # Create a test user object
+    test_user = LDAPUser(
+        cn='John Doe',
+        uid='jdoe',
+        mail='john.doe@company.com',
+        givenName='John',
+        sn='Doe',
+        department='IT',
+        title='Developer'
+    )
+
+    # Create evaluator and inject the user object
+    evaluator = EasyScriptEvaluator()
+    user_variables = {'user': test_user}
+
+    print("=== Before Assignment ===")
+    print(f'user.department: {evaluator.evaluate("user.department", user_variables)}')
+
+    # Test the main assignment case: user.department = "25_" + user.department
+    print(f"\nTesting: user.department = \"25_\" + user.department")
+    result = evaluator.evaluate('user.department = "25_" + user.department', user_variables)
+    print(f"Assignment result: {result}")
+    
+    print(f"\n=== After Assignment ===")
+    print(f'user.department: {evaluator.evaluate("user.department", user_variables)}')
+
+    # Test other assignment operations
+    print(f"\nTesting: user.title = \"Senior \" + user.title")
+    result = evaluator.evaluate('user.title = "Senior " + user.title', user_variables)
+    print(f"Assignment result: {result}")
+    print(f'user.title: {evaluator.evaluate("user.title", user_variables)}')
+
+    # Test assignment with different data types
+    print(f"\nTesting: user.cn = \"Updated Name\"")
+    result = evaluator.evaluate('user.cn = "Updated Name"', user_variables)
+    print(f"Assignment result: {result}")
+    print(f'user.cn: {evaluator.evaluate("user.cn", user_variables)}')
+
+    # Test assignment in conditional context
+    print(f"\nTesting assignment in conditional:")
+    print(f'if len(user.uid) > 2: user.uid = user.uid + "_new"')
+    result = evaluator.evaluate('if len(user.uid) > 2: user.uid = user.uid + "_new"', user_variables)
+    print(f"Conditional assignment result: {result}")
+    print(f'user.uid: {evaluator.evaluate("user.uid", user_variables)}')
+
+    print("\n=== Assignment Functionality Tests Completed! ===")
+
+
 if __name__ == "__main__":
     test_easyscript_user_functionality()
     test_custom_object_injection()
+    test_assignment_functionality()

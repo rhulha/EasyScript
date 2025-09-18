@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "easyscript"
-version = "0.2.0"
+version = "0.3.0"
 description = "A simple scripting language that blends Python and JavaScript syntax"
 readme = "README.md"
 requires-python = ">=3.7"

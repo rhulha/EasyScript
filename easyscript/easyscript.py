@@ -133,7 +133,7 @@ class EasyScriptEvaluator:
                 tokens.append(Token(TokenType.COMMA, ',', i))
             elif code[i] == '.':
                 tokens.append(Token(TokenType.DOT, '.', i))
-            elif code[i] in '+-*/><!~':
+            elif code[i] in '+-*/><!~=':
                 tokens.append(Token(TokenType.OPERATOR, code[i], i))
 
             i += 1
@@ -151,7 +151,103 @@ class EasyScriptEvaluator:
             self.current_token_index += 1
 
     def parse_expression(self) -> Any:
-        return self.parse_or_expression()
+        return self.parse_assignment()
+
+    def parse_assignment(self) -> Any:
+        """Parse assignment expressions like object.property = value"""
+        # Check if this looks like an assignment by looking ahead
+        if self._is_assignment():
+            return self._parse_assignment_expression()
+        else:
+            return self.parse_or_expression()
+
+    def _is_assignment(self) -> bool:
+        """Look ahead to see if this is an assignment expression"""
+        saved_index = self.current_token_index
+        
+        try:
+            # Try to parse identifier.property pattern
+            if self.current_token().type != TokenType.IDENTIFIER:
+                return False
+            
+            self.consume_token()  # consume identifier
+            
+            # Must have at least one dot for property access
+            if self.current_token().type != TokenType.DOT:
+                return False
+            
+            # Skip through property chain
+            while self.current_token().type == TokenType.DOT:
+                self.consume_token()  # consume '.'
+                if self.current_token().type != TokenType.IDENTIFIER:
+                    return False
+                self.consume_token()  # consume property name
+            
+            # Check if next token is '='
+            is_assignment = (self.current_token().type == TokenType.OPERATOR and 
+                           self.current_token().value == '=')
+            
+            return is_assignment
+            
+        finally:
+            # Restore position
+            self.current_token_index = saved_index
+
+    def _parse_assignment_expression(self) -> Any:
+        """Parse a complete assignment expression"""
+        # Parse the left side (object.property)
+        if self.current_token().type != TokenType.IDENTIFIER:
+            raise SyntaxError("Assignment target must start with an identifier")
+        
+        obj_name = self.current_token().value
+        self.consume_token()
+        
+        if obj_name not in self.variables:
+            raise NameError(f"Variable '{obj_name}' is not defined")
+        
+        obj = self.variables[obj_name]
+        property_chain = []
+        
+        # Handle property access chain (e.g., user.cn, user.department)
+        while self.current_token().type == TokenType.DOT:
+            self.consume_token()  # consume '.'
+            if self.current_token().type != TokenType.IDENTIFIER:
+                raise SyntaxError("Expected property name after '.'")
+            
+            property_name = self.current_token().value
+            property_chain.append(property_name)
+            self.consume_token()
+        
+        if not property_chain:
+            raise SyntaxError("Cannot assign to variable directly, only to object properties")
+        
+        # Consume the '=' operator
+        if (self.current_token().type == TokenType.OPERATOR and 
+            self.current_token().value == '='):
+            self.consume_token()
+        else:
+            raise SyntaxError("Expected '=' in assignment")
+        
+        # Parse the right side (the value to assign)
+        value = self.parse_or_expression()
+        
+        # Perform the assignment
+        return self._perform_assignment(obj, property_chain, value)
+
+    def _perform_assignment(self, obj: Any, property_chain: List[str], value: Any) -> Any:
+        """Perform the actual assignment operation"""
+        # Navigate to the parent object (all but the last property)
+        current_obj = obj
+        for prop in property_chain[:-1]:
+            if not hasattr(current_obj, prop):
+                raise AttributeError(f"Object has no attribute '{prop}'")
+            current_obj = getattr(current_obj, prop)
+        
+        # Set the final property
+        final_property = property_chain[-1]
+        setattr(current_obj, final_property, value)
+        
+        return value
 
     def parse_or_expression(self) -> Any:
         left = self.parse_and_expression()
