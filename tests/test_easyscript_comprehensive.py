@@ -103,10 +103,6 @@ class TestEasyScriptBasics(unittest.TestCase):
             ("true or false", True),
             ("false or true", True),
             ("false or false", False),
-            ("true && true", True),  # JS style
-            ("true && false", False),
-            ("true || false", True),
-            ("false || false", False),
         ]
         
         for expression, expected in test_cases:
@@ -259,12 +255,11 @@ class TestEasyScriptTokenizer(unittest.TestCase):
 
     def test_operator_tokenization(self):
         """Test tokenization of operators"""
-        tokens = self.evaluator.tokenize("+ - * / > < >= <= == != ~ = && ||")
+        tokens = self.evaluator.tokenize("+ - * / > < >= <= == != ~ =")
         
         operator_tokens = [t for t in tokens if t.type == TokenType.OPERATOR]
         
-        # Note: && and || are converted to 'and' and 'or'
-        expected_operators = ["+", "-", "*", "/", ">", "<", ">=", "<=", "==", "!=", "~", "=", "and", "or"]
+        expected_operators = ["+", "-", "*", "/", ">", "<", ">=", "<=", "==", "!=", "~", "="]
         actual_operators = [t.value for t in operator_tokens]
         
         self.assertEqual(actual_operators, expected_operators)
@@ -426,6 +421,13 @@ class TestEasyScriptErrorHandling(unittest.TestCase):
         # Test that direct variable assignment is not supported (only property assignment)
         with self.assertRaises(NameError):
             self.evaluator.evaluate("undefined_variable = value")  # Undefined variable
+        
+        # Test that && and || are no longer supported
+        with self.assertRaises(SyntaxError):
+            self.evaluator.evaluate("true && false")
+        
+        with self.assertRaises(SyntaxError):
+            self.evaluator.evaluate("true || false")
 
     def test_assignment_to_nonexistent_object(self):
         """Test assignment to properties of non-existent objects"""

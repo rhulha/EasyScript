@@ -14,7 +14,7 @@ This directory contains a comprehensive unit test suite for EasyScript that cove
 - Arithmetic operations (+, -, *, /, order of operations)
 - String operations and concatenation
 - Comparison operations (>, <, >=, <=, ==, !=)
-- Boolean operations (and, or, &&, ||, true/false)
+- Boolean operations (and, or, true/false)
 - Built-in variables (day, month, year)
 - Built-in functions (len, log)
 - Regex operator (~)

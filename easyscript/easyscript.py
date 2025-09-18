@@ -9,7 +9,7 @@ EasyScript is designed to be an easy-to-use scripting language for:
 
 Features:
 - JavaScript-style string concatenation (string + number)
-- Python-style boolean operators (and, or) with JS alternatives (&&, ||)
+- Python-style boolean operators (and, or)
 - Object property access with dot notation (user.cn, user.mail)
 - Built-in variables: day, month, year
 - Built-in functions: len(), log()
@@ -122,14 +122,8 @@ class EasyScriptEvaluator:
             # Two-character operators
             if i < len(code) - 1:
                 two_char = code[i:i+2]
-                if two_char in ['>=', '<=', '==', '!=', '&&', '||']:
-                    # Convert JS-style operators to Python-style
-                    if two_char == '&&':
-                        tokens.append(Token(TokenType.OPERATOR, 'and', i))
-                    elif two_char == '||':
-                        tokens.append(Token(TokenType.OPERATOR, 'or', i))
-                    else:
-                        tokens.append(Token(TokenType.OPERATOR, two_char, i))
+                if two_char in ['>=', '<=', '==', '!=']:
+                    tokens.append(Token(TokenType.OPERATOR, two_char, i))
                     i += 2
                     continue
 
@@ -150,6 +144,10 @@ class EasyScriptEvaluator:
                 tokens.append(Token(TokenType.DOT, '.', i))
             elif code[i] in '+-*/><!~=':
                 tokens.append(Token(TokenType.OPERATOR, code[i], i))
+            elif code[i] in '&|':
+                raise SyntaxError(f"Unsupported operator '{code[i]}' at position {i}. Use 'and' and 'or' instead of '&&' and '||'.")
+            else:
+                raise SyntaxError(f"Unexpected character '{code[i]}' at position {i}")
 
             i += 1
 
@@ -267,8 +265,7 @@ class EasyScriptEvaluator:
     def parse_or_expression(self) -> Any:
         left = self.parse_and_expression()
 
-        while ((self.current_token().type == TokenType.OPERATOR and self.current_token().value in ['or', '||']) or
-               (self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'or')):
+        while (self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'or'):
             self.consume_token()
             right = self.parse_and_expression()
             left = left or right
@@ -278,8 +275,7 @@ class EasyScriptEvaluator:
     def parse_and_expression(self) -> Any:
         left = self.parse_comparison()
 
-        while ((self.current_token().type == TokenType.OPERATOR and self.current_token().value in ['and', '&&']) or
-               (self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'and')):
+        while (self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'and'):
             self.consume_token()
             right = self.parse_comparison()
             left = left and right
