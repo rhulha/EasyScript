@@ -29,7 +29,7 @@ if len(read()) > 100
 
 # Check if it's a GET request
 if read() ~ "GET.*"
-    log("<p>✓ This is a GET request</p>")
+    log("<p> This is a GET request</p>")
 
 # Check for specific paths
 if read() ~ "GET /hello.*"
