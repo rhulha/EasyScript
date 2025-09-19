@@ -543,19 +543,42 @@ class EasyScriptEvaluator:
 
     def evaluate(self, code: str, variables: Optional[Dict[str, Any]] = None) -> Any:
         """
-        Evaluate an EasyScript expression or statement
+        Evaluate EasyScript code (single expression, statement, or multi-line script)
 
         Args:
-            code: The EasyScript code to evaluate
+            code: The EasyScript code to evaluate (single line or multi-line)
             variables: Optional dictionary of additional variables
 
         Returns:
-            The result of the evaluation
+            The result of the evaluation (for single statements) or the result of the last statement (for multi-line scripts)
         """
         if variables:
             self.variables.update(variables)
 
-        self.tokens = self.tokenize(code)
-        self.current_token_index = 0
-
-        return self.parse_statement()
+        # Split code into individual lines and filter out comments and empty lines
+        lines = code.split('\n')
+        statements = []
+        
+        for line in lines:
+            line = line.strip()
+            # Skip empty lines and comment lines
+            if line and not line.startswith('#'):
+                statements.append(line)
+        
+        # Handle edge case of no statements
+        if not statements:
+            return None
+        
+        last_result = None
+        
+        # Execute each statement (works for both single and multiple statements)
+        for statement in statements:
+            try:
+                self.tokens = self.tokenize(statement)
+                self.current_token_index = 0
+                last_result = self.parse_statement()
+            except Exception as e:
+                # Enhanced error messages for all cases
+                raise Exception(f"Error in statement '{statement}': {e}")
+        
+        return last_result

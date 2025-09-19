@@ -72,10 +72,10 @@ def main():
         evaluator = EasyScriptEvaluator()
         result = evaluator.evaluate(code)
         
-        # Only print result if it's not None (similar to Python REPL behavior)
-        if result is not None:
-            print(result)
-            
+        # For script execution, don't print the final result since log() statements
+        # already print their output. Only print non-None results that aren't from log() calls.
+        # This prevents duplicate output from log() functions.
+        
     except Exception as e:
         print(f"Error executing EasyScript: {e}", file=sys.stderr)
         if args.verbose:
