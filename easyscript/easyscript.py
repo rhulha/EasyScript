@@ -166,7 +166,7 @@ class EasyScriptEvaluator:
                     i += 1
                 value = code[start:i]
 
-                if value in ['if', 'return', 'and', 'or', 'not', 'True', 'False', 'true', 'false']:
+                if value in ['if', 'else', 'return', 'and', 'or', 'not', 'True', 'False', 'true', 'false']:
                     tokens.append(Token(TokenType.KEYWORD, value, start))
                 else:
                     tokens.append(Token(TokenType.IDENTIFIER, value, start))
@@ -234,6 +234,13 @@ class EasyScriptEvaluator:
         if self._is_assignment():
             return self._parse_assignment_expression()
         else:
+            return self.parse_conditional_expression()
+
+    def parse_conditional_expression(self) -> Any:
+        """Parse if-else conditional expressions"""
+        if self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'if':
+            return self.parse_if_statement()
+        else:
             return self.parse_or_expression()
 
     def _is_assignment(self) -> bool:
@@ -293,7 +300,7 @@ class EasyScriptEvaluator:
             raise SyntaxError("Expected '=' in assignment")
         
         # Parse the right side (the value to assign)
-        value = self.parse_or_expression()
+        value = self.parse_conditional_expression()
         
         # Perform the assignment
         if not property_chain:
@@ -586,21 +593,39 @@ class EasyScriptEvaluator:
         if self.current_token().type == TokenType.COLON:
             self.consume_token()
 
-        # Handle optional return keyword
+        # Handle optional return keyword in if clause
+        if_has_return = False
         if self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'return':
             self.consume_token()
+            if_has_return = True
 
-        # If there's more content after the condition (and optional return), parse it as the return value
-        if (self.current_token().type != TokenType.EOF):
-            return_value = self.parse_expression()
+        # Parse the if clause expression/statement
+        if_value = None
+        if (self.current_token().type != TokenType.EOF and 
+            not (self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'else')):
+            if_value = self.parse_expression()
 
-            if condition:
-                return return_value
-            else:
-                return None
+        # Check for else clause
+        else_value = None
+        if (self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'else'):
+            self.consume_token()  # consume 'else'
+            
+            if self.current_token().type == TokenType.COLON:
+                self.consume_token()
 
-        # If no return value specified, just return the condition result
-        return condition
+            # Handle optional return keyword in else clause  
+            if self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'return':
+                self.consume_token()
+
+            # Parse the else clause expression/statement
+            if (self.current_token().type != TokenType.EOF):
+                else_value = self.parse_expression()
+
+        # Execute the appropriate clause based on condition
+        if condition:
+            return if_value
+        else:
+            return else_value if else_value is not None else None
 
     def evaluate(self, code: str, variables: Optional[Dict[str, Any]] = None) -> Any:
         """

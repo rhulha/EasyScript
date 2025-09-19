@@ -1,0 +1,14 @@
+// Basic if-else
+if 5 > 3: "yes" else: "no"
+
+// In assignments
+result = if a > 5: "big" else: "small"
+
+// In function calls
+log(if a > 3: "a is greater than 3" else: "a is not greater than 3")
+
+// With complex conditions
+if x > 5 and y < 10: "valid" else: "invalid"
+
+// With arithmetic
+value = if score > 80: score * 1.1 else: score * 0.9
