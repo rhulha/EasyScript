@@ -1,27 +1,13 @@
-#!/usr/bin/env python3
-"""
-HTTP Server for EasyScript Demonstration
-
-This server opens port 8080 and demonstrates how EasyScript can be used
-to handle HTTP requests. It intercepts log() calls and sends them as
-HTTP responses.
-"""
-
 import socket
 import threading
 import sys
-import os
 from pathlib import Path
 
-# Add the easyscript module to the path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from easyscript.easyscript import EasyScriptEvaluator, TokenType
 
-
 class HTTPEasyScriptEvaluator(EasyScriptEvaluator):
-    """Extended EasyScript evaluator for HTTP server use"""
-    
     def __init__(self, request_data=None):
         super().__init__()
         self.request_data = request_data or ""
@@ -39,7 +25,6 @@ class HTTPEasyScriptEvaluator(EasyScriptEvaluator):
 
         self.consume_token()  # consume ')'
 
-        # Built-in functions
         if function_name == 'len':
             if len(args) != 1:
                 raise TypeError(f"len() takes exactly one argument ({len(args)} given)")
@@ -48,23 +33,19 @@ class HTTPEasyScriptEvaluator(EasyScriptEvaluator):
             if len(args) != 1:
                 raise TypeError(f"log() takes exactly one argument ({len(args)} given)")
             value = str(args[0])
-            # Capture log output instead of printing
             self.log_output.append(value)
             return value
         elif function_name == 'read':
             if len(args) != 0:
                 raise TypeError(f"read() takes no arguments ({len(args)} given)")
-            # Return the HTTP request data
             return self.request_data
         else:
             raise NameError(f"Function '{function_name}' is not defined")
     
     def get_log_output(self):
-        """Get all captured log output as a single string"""
         return '\n'.join(self.log_output)
     
     def clear_log_output(self):
-        """Clear the captured log output"""
         self.log_output = []
 
 
@@ -73,7 +54,6 @@ def handle_client(client_socket, address):
     try:
         print(f"[INFO] Connection from {address}")
         
-        # Receive the HTTP request
         print(f"[DEBUG] Waiting for request data from {address[0]}...")
         request_data = client_socket.recv(4096).decode('utf-8')
         print(f"[DEBUG] Received {len(request_data)} bytes")
@@ -85,34 +65,13 @@ def handle_client(client_socket, address):
         print(f"[DEBUG] Request from {address[0]}:")
         print(f"  {request_data.split()[0]} {request_data.split()[1] if len(request_data.split()) > 1 else '/'}")
         
-        # Create EasyScript evaluator with the request data
         evaluator = HTTPEasyScriptEvaluator(request_data)
-        
-        # Read and execute the EasyScript HTTP server file
         try:
-            script_path = Path(__file__).parent / "http_server.es"
-            with open(script_path, 'r', encoding='utf-8') as f:
+            with open("http_server.es", 'r', encoding='utf-8') as f:
                 easyscript_code = f.read()
-            
-            # Execute the EasyScript code
             evaluator.evaluate(easyscript_code)
-            
-            # Get the captured output (which should be the HTTP response)
             response = evaluator.get_log_output()
             
-        except FileNotFoundError:
-            response = """HTTP/1.1 404 Not Found\r
-Content-Type: text/html\r
-Connection: close\r
-\r
-<html>
-<head><title>404 - Script Not Found</title></head>
-<body>
-<h1>404 - EasyScript Not Found</h1>
-<p>The http_server.es file was not found.</p>
-<p>Please make sure the http_server.es file exists in the same directory as this server.</p>
-</body>
-</html>"""
         except Exception as e:
             print(f"[ERROR] EasyScript execution error: {e}")
             response = f"""HTTP/1.1 500 Internal Server Error\r
