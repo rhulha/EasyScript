@@ -229,7 +229,7 @@ class EasyScriptEvaluator:
         return self.parse_assignment()
 
     def parse_assignment(self) -> Any:
-        """Parse assignment expressions like object.property = value"""
+        """Parse assignment expressions like a = 5 or object.property = value"""
         # Check if this looks like an assignment by looking ahead
         if self._is_assignment():
             return self._parse_assignment_expression()
@@ -241,17 +241,13 @@ class EasyScriptEvaluator:
         saved_index = self.current_token_index
         
         try:
-            # Try to parse identifier.property pattern
+            # Check if it starts with an identifier
             if self.current_token().type != TokenType.IDENTIFIER:
                 return False
             
             self.consume_token()  # consume identifier
             
-            # Must have at least one dot for property access
-            if self.current_token().type != TokenType.DOT:
-                return False
-            
-            # Skip through property chain
+            # Skip through optional property chain
             while self.current_token().type == TokenType.DOT:
                 self.consume_token()  # consume '.'
                 if self.current_token().type != TokenType.IDENTIFIER:
@@ -270,17 +266,13 @@ class EasyScriptEvaluator:
 
     def _parse_assignment_expression(self) -> Any:
         """Parse a complete assignment expression"""
-        # Parse the left side (object.property)
+        # Parse the left side (identifier or object.property)
         if self.current_token().type != TokenType.IDENTIFIER:
             raise SyntaxError("Assignment target must start with an identifier")
         
-        obj_name = self.current_token().value
+        identifier_name = self.current_token().value
         self.consume_token()
         
-        if obj_name not in self.variables:
-            raise NameError(f"Variable '{obj_name}' is not defined")
-        
-        obj = self.variables[obj_name]
         property_chain = []
         
         # Handle property access chain (e.g., user.cn, user.department)
@@ -293,9 +285,6 @@ class EasyScriptEvaluator:
             property_chain.append(property_name)
             self.consume_token()
         
-        if not property_chain:
-            raise SyntaxError("Cannot assign to variable directly, only to object properties")
-        
         # Consume the '=' operator
         if (self.current_token().type == TokenType.OPERATOR and 
             self.current_token().value == '='):
@@ -307,7 +296,17 @@ class EasyScriptEvaluator:
         value = self.parse_or_expression()
         
         # Perform the assignment
-        return self._perform_assignment(obj, property_chain, value)
+        if not property_chain:
+            # Direct variable assignment (e.g., a = 5)
+            self.variables[identifier_name] = value
+            return value
+        else:
+            # Object property assignment (e.g., user.department = "IT")
+            if identifier_name not in self.variables:
+                raise NameError(f"Variable '{identifier_name}' is not defined")
+            
+            obj = self.variables[identifier_name]
+            return self._perform_assignment(obj, property_chain, value)
 
     def _perform_assignment(self, obj: Any, property_chain: List[str], value: Any) -> Any:
         """Perform the actual assignment operation"""
