@@ -66,6 +66,48 @@ class EasyScriptEvaluator:
             'year': now.year
         }
 
+    def _parse_statements(self, code: str) -> List[str]:
+        """Parse statements from code, properly handling string literals that may contain newlines"""
+        statements = []
+        current_statement = ""
+        in_string = False
+        escape_next = False
+        i = 0
+        
+        while i < len(code):
+            char = code[i]
+            
+            if escape_next:
+                current_statement += char
+                escape_next = False
+            elif char == '\\' and in_string:
+                current_statement += char
+                escape_next = True
+            elif char == '"':
+                current_statement += char
+                in_string = not in_string
+            elif char == '\n':
+                if in_string:
+                    # Newline inside string literal - part of the string
+                    current_statement += char
+                else:
+                    # Newline outside string - end of statement
+                    stmt = current_statement.strip()
+                    if stmt and not stmt.startswith('#'):
+                        statements.append(stmt)
+                    current_statement = ""
+            else:
+                current_statement += char
+            
+            i += 1
+        
+        # Add the final statement if there is one
+        stmt = current_statement.strip()
+        if stmt and not stmt.startswith('#'):
+            statements.append(stmt)
+        
+        return statements
+
     def tokenize(self, code: str) -> List[Token]:
         tokens = []
         i = 0
@@ -90,8 +132,28 @@ class EasyScriptEvaluator:
                 i += 1
                 string_value = ""
                 while i < len(code) and code[i] != '"':
-                    string_value += code[i]
-                    i += 1
+                    if code[i] == '\\' and i + 1 < len(code):
+                        # Handle escape sequences
+                        escape_char = code[i + 1]
+                        if escape_char == 'n':
+                            string_value += '\n'
+                        elif escape_char == 't':
+                            string_value += '\t'
+                        elif escape_char == 'r':
+                            string_value += '\r'
+                        elif escape_char == '\\':
+                            string_value += '\\'
+                        elif escape_char == '"':
+                            string_value += '"'
+                        elif escape_char == "'":
+                            string_value += "'"
+                        else:
+                            # For unknown escape sequences, keep both characters
+                            string_value += code[i] + escape_char
+                        i += 2  # Skip both backslash and escape character
+                    else:
+                        string_value += code[i]
+                        i += 1
                 if i < len(code):
                     i += 1  # Skip closing quote
                 tokens.append(Token(TokenType.STRING, string_value, start))
@@ -555,15 +617,8 @@ class EasyScriptEvaluator:
         if variables:
             self.variables.update(variables)
 
-        # Split code into individual lines and filter out comments and empty lines
-        lines = code.split('\n')
-        statements = []
-        
-        for line in lines:
-            line = line.strip()
-            # Skip empty lines and comment lines
-            if line and not line.startswith('#'):
-                statements.append(line)
+        # Parse statements properly, respecting string literals that may contain newlines
+        statements = self._parse_statements(code)
         
         # Handle edge case of no statements
         if not statements:
@@ -577,8 +632,11 @@ class EasyScriptEvaluator:
                 self.tokens = self.tokenize(statement)
                 self.current_token_index = 0
                 last_result = self.parse_statement()
+            except (NameError, AttributeError, TypeError, ValueError, SyntaxError, ZeroDivisionError) as e:
+                # Re-raise specific exception types that tests expect
+                raise e
             except Exception as e:
-                # Enhanced error messages for all cases
+                # For other exceptions, provide enhanced error messages
                 raise Exception(f"Error in statement '{statement}': {e}")
         
         return last_result
