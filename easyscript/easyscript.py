@@ -607,10 +607,12 @@ class EasyScriptEvaluator:
 
         condition = self.parse_expression()
 
-        # Handle optional 'then' keyword
+        # Require 'then' keyword
         if (self.current_token().type == TokenType.KEYWORD and 
             self.current_token().value == 'then'):
             self.consume_token()
+        else:
+            raise SyntaxError("Expected 'then' keyword after if condition")
 
         # Parse the if clause expression/statement
         if_value = None
@@ -918,10 +920,12 @@ class EasyScriptEvaluator:
         # Parse condition
         self._verify_expression_syntax()
         
-        # Check for 'then' keyword (optional)
+        # Require 'then' keyword
         if (self.current_token().type == TokenType.KEYWORD and 
             self.current_token().value == 'then'):
             self.consume_token()
+        else:
+            raise SyntaxError("Expected 'then' keyword after if condition")
         
         # Parse then branch - this is required
         if (self.current_token().type == TokenType.EOF):
