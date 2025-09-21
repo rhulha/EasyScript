@@ -166,7 +166,7 @@ class EasyScriptEvaluator:
                     i += 1
                 value = code[start:i]
 
-                if value in ['if', 'else', 'return', 'and', 'or', 'not', 'True', 'False', 'true', 'false']:
+                if value in ['if', 'else', 'return', 'and', 'or', 'not', 'True', 'False', 'true', 'false', 'null']:
                     tokens.append(Token(TokenType.KEYWORD, value, start))
                 else:
                     tokens.append(Token(TokenType.IDENTIFIER, value, start))
@@ -435,22 +435,34 @@ class EasyScriptEvaluator:
     def parse_primary(self) -> Any:
         token = self.current_token()
         result = None
+        result_set = False
 
         if token.type == TokenType.NUMBER:
             self.consume_token()
             result = token.value
+            result_set = True
 
         elif token.type == TokenType.STRING:
             self.consume_token()
             result = token.value
+            result_set = True
 
         elif token.type == TokenType.KEYWORD:
             if token.value in ['True', 'true']:
                 self.consume_token()
                 result = True
+                result_set = True
             elif token.value in ['False', 'false']:
                 self.consume_token()
                 result = False
+                result_set = True
+            elif token.value == 'null':
+                self.consume_token()
+                result = None
+                result_set = True
+            elif token.value == 'if':
+                result = self.parse_if_statement()
+                result_set = True
 
         elif token.type == TokenType.IDENTIFIER:
             name = token.value
@@ -459,6 +471,7 @@ class EasyScriptEvaluator:
             # Check for function call
             if self.current_token().type == TokenType.LPAREN:
                 result = self.parse_function_call(name)
+                result_set = True
             else:
                 # Check for property access (dot notation)
                 if name in self.variables:
@@ -481,15 +494,17 @@ class EasyScriptEvaluator:
                         raise AttributeError(f"Object has no attribute '{property_name}'")
 
                 result = obj
+                result_set = True
 
         elif token.type == TokenType.LPAREN:
             self.consume_token()
             result = self.parse_expression()
+            result_set = True
             if self.current_token().type == TokenType.RPAREN:
                 self.consume_token()
             # result is already set
 
-        if result is None:
+        if not result_set:
             raise SyntaxError(f"Unexpected token: {token.value}")
 
         # Handle indexing and slicing for any result (numbers, strings, lists, etc.)

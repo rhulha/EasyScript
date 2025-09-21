@@ -95,6 +95,7 @@ class TestEasyScriptBasics(unittest.TestCase):
             ("false", False),
             ("True", True),
             ("False", False),
+            ("null", None),  # Test null keyword
             ("true and true", True),
             ("true and false", False),
             ("false and true", False),
@@ -103,17 +104,24 @@ class TestEasyScriptBasics(unittest.TestCase):
             ("true or false", True),
             ("false or true", True),
             ("false or false", False),
+            # Test with null
+            ("null and true", None),
+            ("null or true", True),
+            ("true and null", None),
+            ("null or false", False),
             # Test not operator
             ("not true", False),
             ("not false", True),
             ("not True", False),
             ("not False", True),
+            ("not null", True),
             # Test not with expressions
             ("not (3 > 5)", True),
             ("not (5 > 3)", False),
             # Test double not
             ("not not true", True),
             ("not not false", False),
+            ("not not null", False),
             # Test not with other operators (precedence)
             ("not true and false", False),  # Should be (not true) and false
             ("not true or false", False),   # Should be (not true) or false
@@ -141,6 +149,9 @@ class TestEasyScriptBasics(unittest.TestCase):
             ('not ""', True),
             ('not "hello"', False),
             ('not " "', False),  # Space is not empty
+            # Null value (null is falsy)
+            ("not null", True),
+            ("null", None),  # Test that null evaluates to None
             # Complex expressions
             ("not (5 - 5)", True),   # 5 - 5 = 0, which is falsy
             ("not (3 + 2)", False),  # 3 + 2 = 5, which is truthy
@@ -217,11 +228,15 @@ class TestEasyScriptBasics(unittest.TestCase):
         test_cases = [
             ('if true: "yes"', "yes"),
             ('if false: "yes"', None),
+            ('if null: "yes"', None),  # null is falsy
             ('if 5 > 3: "greater"', "greater"),
             ('if 3 > 5: "greater"', None),
             ('if true: return "returned"', "returned"),
             ('if len("hello") > 3: "long"', "long"),
             ('if len("hi") > 3: "long"', None),
+            # Test with null in conditions
+            ('if not null: "not null"', "not null"),
+            ('if null or true: "truthy"', "truthy"),
         ]
         
         for expression, expected in test_cases:
