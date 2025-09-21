@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from easyscript import EasyScriptEvaluator
 from easyscript.easyscript import TokenType, Token
-from test_helpers import LDAPUser
+from tests.test_helpers import LDAPUser
 
 
 class TestEasyScriptBasics(unittest.TestCase):
@@ -226,17 +226,17 @@ class TestEasyScriptBasics(unittest.TestCase):
     def test_conditional_statements(self):
         """Test if statements"""
         test_cases = [
-            ('if true: "yes"', "yes"),
-            ('if false: "yes"', None),
-            ('if null: "yes"', None),  # null is falsy
-            ('if 5 > 3: "greater"', "greater"),
-            ('if 3 > 5: "greater"', None),
-            ('if true: return "returned"', "returned"),
-            ('if len("hello") > 3: "long"', "long"),
-            ('if len("hi") > 3: "long"', None),
+            ('if true then "yes" else null', "yes"),
+            ('if false then "yes" else null', None),
+            ('if null then "yes" else null', None),  # null is falsy
+            ('if 5 > 3 then "greater" else null', "greater"),
+            ('if 3 > 5 then "greater" else null', None),
+            ('if true then "returned" else null', "returned"),
+            ('if len("hello") > 3 then "long" else null', "long"),
+            ('if len("hi") > 3 then "long" else null', None),
             # Test with null in conditions
-            ('if not null: "not null"', "not null"),
-            ('if null or true: "truthy"', "truthy"),
+            ('if not null then "not null" else null', "not null"),
+            ('if null or true then "truthy" else null', "truthy"),
         ]
         
         for expression, expected in test_cases:
@@ -247,8 +247,8 @@ class TestEasyScriptBasics(unittest.TestCase):
     def test_complex_expressions(self):
         """Test complex nested expressions"""
         test_cases = [
-            ('if 3 > 1 and len("hello") > 3: return True', True),
-            ('if (5 + 3) > 6 and "test" ~ "t.*": "match"', "match"),
+            ('if 3 > 1 and len("hello") > 3 then True else False', True),
+            ('if (5 + 3) > 6 and "test" ~ "t.*" then "match" else "no match"', "match"),
             ('"Result: " + (2 * 3 + 4)', "Result: 10"),
             ('len("hello") + len("world")', 10),
         ]
@@ -302,11 +302,11 @@ class TestEasyScriptTokenizer(unittest.TestCase):
 
     def test_keyword_tokenization(self):
         """Test tokenization of keywords"""
-        tokens = self.evaluator.tokenize("if return and or not True False true false")
+        tokens = self.evaluator.tokenize("if and or not True False true false")
         
         keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
         
-        expected_keywords = ["if", "return", "and", "or", "not", "True", "False", "true", "false"]
+        expected_keywords = ["if", "and", "or", "not", "True", "False", "true", "false"]
         actual_keywords = [t.value for t in keyword_tokens]
         
         self.assertEqual(actual_keywords, expected_keywords)
@@ -406,7 +406,8 @@ class TestEasyScriptObjectHandling(unittest.TestCase):
         # Reset user for clean test
         self.test_user.department = "Engineering"
         
-        result = self.evaluator.evaluate('if len(user.department) > 5: user.department = "ENGINEERING"', self.user_variables)
+        # Use a conditional expression that assigns and returns the new value
+        result = self.evaluator.evaluate('if len(user.department) > 5 then (user.department = "ENGINEERING") else user.department', self.user_variables)
         self.assertEqual(result, "ENGINEERING")
         self.assertEqual(self.test_user.department, "ENGINEERING")
 
@@ -602,7 +603,7 @@ class TestEasyScriptIntegration(unittest.TestCase):
             'user.department = "25_" + user.department',
             'user.title = "Senior " + user.title',
             'user.mail = user.uid + "@newcompany.com"',
-            'if len(user.cn) > 5: user.cn = user.cn + " (Updated)"'
+            'if len(user.cn) > 5 then (user.cn = user.cn + " (Updated)") else user.cn'
         ]
         
         expected_results = [
@@ -629,8 +630,10 @@ class TestEasyScriptIntegration(unittest.TestCase):
         variables = {'user': user}
         
         complex_expression = '''
-        if user.department == "Engineering" and user.title ~ ".*Manager.*":
-            user.department = "ENGINEERING_MGMT"
+        if user.department == "Engineering" and user.title ~ ".*Manager.*" then
+            (user.department = "ENGINEERING_MGMT")
+        else
+            user.department
         '''
         
         # Remove extra whitespace and newlines for evaluation
@@ -649,7 +652,7 @@ class TestEasyScriptIntegration(unittest.TestCase):
         test_cases = [
             ("year - 2000", now.year - 2000),
             ("month * day", now.month * now.day),
-            ("if year > 2020: year - 2020", now.year - 2020 if now.year > 2020 else None),
+            ("if year > 2020 then year - 2020 else 0", now.year - 2020 if now.year > 2020 else 0),
         ]
         
         for expression, expected in test_cases:
