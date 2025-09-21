@@ -14,7 +14,6 @@ Features:
 - Built-in variables: day, month, year
 - Built-in functions: len(), log()
 - Regex matching with ~ operator (string ~ pattern)
-- Optional return keyword in conditionals
 - Support for both True/False and true/false
 """
 
@@ -166,7 +165,7 @@ class EasyScriptEvaluator:
                     i += 1
                 value = code[start:i]
 
-                if value in ['if', 'else', 'return', 'and', 'or', 'not', 'True', 'False', 'true', 'false', 'null']:
+                if value in ['if', 'then', 'else', 'and', 'or', 'not', 'True', 'False', 'true', 'false', 'null']:
                     tokens.append(Token(TokenType.KEYWORD, value, start))
                 else:
                     tokens.append(Token(TokenType.IDENTIFIER, value, start))
@@ -600,9 +599,6 @@ class EasyScriptEvaluator:
     def parse_statement(self) -> Any:
         if self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'if':
             return self.parse_if_statement()
-        elif self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'return':
-            self.consume_token()
-            return self.parse_expression()
         else:
             return self.parse_expression()
 
@@ -611,14 +607,10 @@ class EasyScriptEvaluator:
 
         condition = self.parse_expression()
 
-        if self.current_token().type == TokenType.COLON:
+        # Handle optional 'then' keyword
+        if (self.current_token().type == TokenType.KEYWORD and 
+            self.current_token().value == 'then'):
             self.consume_token()
-
-        # Handle optional return keyword in if clause
-        if_has_return = False
-        if self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'return':
-            self.consume_token()
-            if_has_return = True
 
         # Parse the if clause expression/statement
         if_value = None
@@ -631,13 +623,6 @@ class EasyScriptEvaluator:
         if (self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'else'):
             self.consume_token()  # consume 'else'
             
-            if self.current_token().type == TokenType.COLON:
-                self.consume_token()
-
-            # Handle optional return keyword in else clause  
-            if self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'return':
-                self.consume_token()
-
             # Parse the else clause expression/statement
             if (self.current_token().type != TokenType.EOF):
                 else_value = self.parse_expression()
@@ -659,6 +644,11 @@ class EasyScriptEvaluator:
         Returns:
             The result of the evaluation (for single statements) or the result of the last statement (for multi-line scripts)
         """
+        # Reset parser state at the beginning of each evaluation to prevent
+        # state corruption from previous failed evaluations
+        self.tokens = []
+        self.current_token_index = 0
+        
         if variables:
             self.variables.update(variables)
 
@@ -685,3 +675,281 @@ class EasyScriptEvaluator:
                 raise Exception(f"Error in statement '{statement}': {e}")
         
         return last_result
+
+    def verify(self, code: str, variables: Optional[Dict[str, Any]] = None) -> bool:
+        """
+        Verify EasyScript code for syntax errors without executing it
+
+        Args:
+            code: The EasyScript code to verify (single line or multi-line)
+            variables: Optional dictionary of additional variables for context
+
+        Returns:
+            True if the syntax is valid, False if there are syntax errors
+        """
+        try:
+            # Save current state
+            original_tokens = self.tokens.copy()
+            original_index = self.current_token_index
+            original_variables = self.variables.copy()
+            
+            # Reset parser state for verification
+            self.tokens = []
+            self.current_token_index = 0
+            
+            # Add temporary variables if provided
+            if variables:
+                self.variables.update(variables)
+            
+            # Parse statements properly, respecting string literals that may contain newlines
+            statements = self._parse_statements(code)
+            
+            # Handle edge case of no statements
+            if not statements:
+                return True
+            
+            # Try to parse each statement (but don't execute)
+            for statement in statements:
+                # Tokenize the statement
+                self.tokens = self.tokenize(statement)
+                self.current_token_index = 0
+                
+                # Try to parse the statement structure without executing
+                self._verify_statement_syntax()
+            
+            return True
+            
+        except (SyntaxError, ValueError) as e:
+            # Syntax or parsing errors
+            return False
+        except Exception as e:
+            # Other errors (like NameError for undefined variables) are not syntax errors
+            # For verification purposes, we only care about syntax, not runtime errors
+            return True
+        finally:
+            # Restore original state
+            self.tokens = original_tokens
+            self.current_token_index = original_index
+            self.variables = original_variables
+
+    def _verify_statement_syntax(self) -> None:
+        """
+        Verify the syntax of a statement without executing it
+        This is similar to parse_statement but doesn't perform actual operations
+        """
+        # Check for assignment
+        if (self.current_token_index + 2 < len(self.tokens) and 
+            self.tokens[self.current_token_index].type == TokenType.IDENTIFIER and
+            self.tokens[self.current_token_index + 1].type == TokenType.OPERATOR and
+            self.tokens[self.current_token_index + 1].value == '='):
+            
+            # Parse assignment syntax
+            self.consume_token()  # consume identifier
+            self.consume_token()  # consume '='
+            self._verify_expression_syntax()  # verify right-hand side
+        else:
+            # Parse expression syntax
+            self._verify_expression_syntax()
+        
+        # Ensure all tokens are consumed (except EOF)
+        if (self.current_token().type != TokenType.EOF):
+            raise SyntaxError(f"Unexpected token after complete expression: {self.current_token().value}")
+
+    def _verify_expression_syntax(self) -> None:
+        """Verify expression syntax without executing"""
+        self._verify_or_expression_syntax()
+
+    def _verify_or_expression_syntax(self) -> None:
+        """Verify OR expression syntax"""
+        self._verify_and_expression_syntax()
+        
+        while (self.current_token().type == TokenType.KEYWORD and 
+               self.current_token().value == 'or'):
+            self.consume_token()
+            self._verify_and_expression_syntax()
+
+    def _verify_and_expression_syntax(self) -> None:
+        """Verify AND expression syntax"""
+        self._verify_equality_expression_syntax()
+        
+        while (self.current_token().type == TokenType.KEYWORD and 
+               self.current_token().value == 'and'):
+            self.consume_token()
+            self._verify_equality_expression_syntax()
+
+    def _verify_equality_expression_syntax(self) -> None:
+        """Verify equality expression syntax"""
+        self._verify_comparison_expression_syntax()
+        
+        while (self.current_token().type == TokenType.OPERATOR and 
+               self.current_token().value in ['==', '!=']):
+            self.consume_token()
+            self._verify_comparison_expression_syntax()
+
+    def _verify_comparison_expression_syntax(self) -> None:
+        """Verify comparison expression syntax"""
+        self._verify_regex_expression_syntax()
+        
+        while (self.current_token().type == TokenType.OPERATOR and 
+               self.current_token().value in ['<', '>', '<=', '>=']):
+            self.consume_token()
+            self._verify_regex_expression_syntax()
+
+    def _verify_regex_expression_syntax(self) -> None:
+        """Verify regex expression syntax"""
+        self._verify_additive_expression_syntax()
+        
+        while (self.current_token().type == TokenType.OPERATOR and 
+               self.current_token().value == '~'):
+            self.consume_token()
+            self._verify_additive_expression_syntax()
+
+    def _verify_additive_expression_syntax(self) -> None:
+        """Verify additive expression syntax"""
+        self._verify_multiplicative_expression_syntax()
+        
+        while (self.current_token().type == TokenType.OPERATOR and 
+               self.current_token().value in ['+', '-']):
+            self.consume_token()
+            self._verify_multiplicative_expression_syntax()
+
+    def _verify_multiplicative_expression_syntax(self) -> None:
+        """Verify multiplicative expression syntax"""
+        self._verify_unary_expression_syntax()
+        
+        while (self.current_token().type == TokenType.OPERATOR and 
+               self.current_token().value in ['*', '/', '%']):
+            self.consume_token()
+            self._verify_unary_expression_syntax()
+
+    def _verify_unary_expression_syntax(self) -> None:
+        """Verify unary expression syntax"""
+        if (self.current_token().type == TokenType.KEYWORD and 
+            self.current_token().value == 'not'):
+            self.consume_token()
+            self._verify_unary_expression_syntax()
+        elif (self.current_token().type == TokenType.OPERATOR and 
+              self.current_token().value in ['+', '-']):
+            # Check if this is actually a valid unary usage
+            # Unary operators should be followed by a valid operand
+            if (self.current_token_index + 1 >= len(self.tokens) or
+                self.tokens[self.current_token_index + 1].type == TokenType.EOF):
+                raise SyntaxError(f"Unary operator '{self.current_token().value}' without operand")
+            self.consume_token()
+            self._verify_unary_expression_syntax()
+        else:
+            self._verify_primary_syntax()
+
+    def _verify_primary_syntax(self) -> None:
+        """Verify primary expression syntax"""
+        token = self.current_token()
+        result_set = False
+
+        if token.type == TokenType.NUMBER:
+            self.consume_token()
+            result_set = True
+
+        elif token.type == TokenType.STRING:
+            self.consume_token()
+            result_set = True
+
+        elif token.type == TokenType.KEYWORD:
+            if token.value in ['True', 'true', 'False', 'false', 'null']:
+                self.consume_token()
+                result_set = True
+            elif token.value == 'if':
+                self._verify_if_statement_syntax()
+                result_set = True
+
+        elif token.type == TokenType.IDENTIFIER:
+            self.consume_token()
+            
+            # Check for function call
+            if self.current_token().type == TokenType.LPAREN:
+                self._verify_function_call_syntax()
+            else:
+                # Handle property access chain (e.g., user.cn, user.mail)
+                while self.current_token().type == TokenType.DOT:
+                    self.consume_token()  # consume '.'
+                    if self.current_token().type != TokenType.IDENTIFIER:
+                        raise SyntaxError("Expected property name after '.'")
+                    self.consume_token()  # consume property name
+            
+            result_set = True
+
+        elif token.type == TokenType.LPAREN:
+            self.consume_token()
+            self._verify_expression_syntax()
+            if self.current_token().type == TokenType.RPAREN:
+                self.consume_token()
+            else:
+                raise SyntaxError("Expected closing parenthesis")
+            result_set = True
+
+        if not result_set:
+            raise SyntaxError(f"Unexpected token: {token.value}")
+
+        # Handle indexing and slicing syntax
+        while self.current_token().type == TokenType.LBRACKET:
+            self._verify_indexing_syntax()
+
+    def _verify_function_call_syntax(self) -> None:
+        """Verify function call syntax"""
+        self.consume_token()  # consume '('
+        
+        # Handle arguments
+        if self.current_token().type != TokenType.RPAREN:
+            self._verify_expression_syntax()
+            while self.current_token().type == TokenType.COMMA:
+                self.consume_token()
+                if self.current_token().type == TokenType.RPAREN:
+                    raise SyntaxError("Trailing comma in function call")
+                self._verify_expression_syntax()
+        
+        if self.current_token().type == TokenType.RPAREN:
+            self.consume_token()
+        else:
+            raise SyntaxError("Expected closing parenthesis in function call")
+
+    def _verify_if_statement_syntax(self) -> None:
+        """Verify if statement syntax"""
+        self.consume_token()  # consume 'if'
+        
+        # Parse condition
+        self._verify_expression_syntax()
+        
+        # Check for 'then' keyword (optional)
+        if (self.current_token().type == TokenType.KEYWORD and 
+            self.current_token().value == 'then'):
+            self.consume_token()
+        
+        # Parse then branch - this is required
+        if (self.current_token().type == TokenType.EOF):
+            raise SyntaxError("Incomplete if statement: missing then branch")
+        self._verify_expression_syntax()
+        
+        # Check for 'else' keyword
+        if (self.current_token().type == TokenType.KEYWORD and 
+            self.current_token().value == 'else'):
+            self.consume_token()
+            if (self.current_token().type == TokenType.EOF):
+                raise SyntaxError("Incomplete if statement: missing else branch")
+            self._verify_expression_syntax()
+
+    def _verify_indexing_syntax(self) -> None:
+        """Verify indexing/slicing syntax"""
+        self.consume_token()  # consume '['
+        
+        # Parse index or slice
+        self._verify_expression_syntax()
+        
+        # Check for slice syntax
+        if self.current_token().type == TokenType.COLON:
+            self.consume_token()
+            if self.current_token().type != TokenType.RBRACKET:
+                self._verify_expression_syntax()
+        
+        if self.current_token().type == TokenType.RBRACKET:
+            self.consume_token()
+        else:
+            raise SyntaxError("Expected closing bracket")
