@@ -11,7 +11,7 @@ A simple scripting language interpreter that blends Python and JavaScript syntax
 - **Built-in Variables**: Pre-defined variables (`day`, `month`, `year`) with support for object injection
 - **Built-in Functions**: Essential functions like `len()`, `log()`
 - **Regex Matching**: Pattern matching with `~` operator (`string ~ pattern`)
-- **Conditional Logic**: Support for `if` statements with optional `return` keyword
+- **Conditional Logic**: Support for `if-then-else` statements (the `then` keyword is required)
 - **Mixed Boolean Values**: Supports both `True/False` and `true/false`
 - **Comments**: Python-style comments using `#` character (everything after `#` is ignored)
 
@@ -51,7 +51,7 @@ result = evaluator.evaluate('log("Debug info")')  # Prints: Debug info, Returns:
 result = evaluator.evaluate('user.mail ~ ".*@.*"', {"user": user})  # Returns: True
 
 # Conditional logic
-result = evaluator.evaluate('if len(user.cn) > 3: return true', {"user": user})  # Returns: True
+result = evaluator.evaluate('if len(user.cn) > 3 then true else false', {"user": user})  # Returns: True
 
 # Comments in expressions
 result = evaluator.evaluate('5 + 3 # This is a comment')  # Returns: 8
@@ -101,6 +101,26 @@ true and False               // False
 not True                     // False
 ```
 
+### Conditional Expressions
+```javascript
+// if-then-else syntax (then keyword is mandatory)
+if 5 > 3 then "greater" else "not greater"      // "greater"
+if false then "yes" else "no"                    // "no"
+
+// Conditions can be complex expressions
+if len("hello") >= 5 then "long" else "short"   // "long"
+if year > 2020 and month == 12 then "recent december" else "other time"
+
+// Nested conditionals
+if user.active then (if user.role == "admin" then "admin user" else "regular user") else "inactive"
+
+// Numeric results
+if user.age >= 18 then user.age else 0
+
+// Using with object properties
+if user.department == "IT" then user.salary * 1.1 else user.salary
+```
+
 ### Comments
 ```javascript
 // Python-style comments using #
@@ -147,14 +167,20 @@ evaluator.evaluate('user.mail ~ ".*@.*"', {"user": user})          // True (emai
 
 ### Conditional Statements
 ```javascript
-// Basic conditional
-if 5 > 3: true               // True
+// Basic conditional - 'then' keyword is required
+if 5 > 3 then true else false        // True
 
-// With return keyword (optional)
-if len(user.cn) > 3: return "Long name"    // "Long name"
+// String results
+if len(user.cn) > 3 then "Long name" else "Short name"    // "Long name"
 
 // Complex conditions
-if user.department == "Engineering" and len(user.cn) > 3: true
+if user.department == "Engineering" and len(user.cn) > 3 then "Valid engineer" else "Invalid"
+
+// Nested expressions
+if year > 2020 then year - 2020 else 0   // Returns difference from 2020
+
+// Boolean expressions
+if user.active then "Active user" else "Inactive user"
 ```
 
 ## Built-in Variables
@@ -247,7 +273,7 @@ variables = {
 result = evaluator.evaluate('user.name + " - " + config.api_url', variables)
 # Returns: "Alice - https://api.example.com"
 
-result = evaluator.evaluate('if user.active and config.debug: "Debug mode"', variables)
+result = evaluator.evaluate('if user.active and config.debug then "Debug mode" else "Production mode"', variables)
 # Returns: "Debug mode"
 
 result = evaluator.evaluate('user.email ~ ".*@company\.com"', variables)
@@ -273,12 +299,12 @@ This project is released under the MIT License. See the LICENSE file for details
 
 **User Access Control**:
 ```javascript
-if user.department == "IT" and len(user.cn) > 0: return true
+if user.department == "IT" and len(user.cn) > 0 then true else false
 ```
 
 **Dynamic Greetings**:
 ```javascript
-if month >= 6 and month <= 8: return "Summer greetings, " + user.givenName
+if month >= 6 and month <= 8 then "Summer greetings, " + user.givenName else "Hello, " + user.givenName
 ```
 
 **Data Validation**:
@@ -287,16 +313,16 @@ if month >= 6 and month <= 8: return "Summer greetings, " + user.givenName
 user = User("john", "john@company.com")
 variables = {"user": user}
 
-result = evaluator.evaluate('if len(user.mail) > 5 and user.mail ~ ".*@.*": return true', variables)
+result = evaluator.evaluate('if len(user.mail) > 5 and user.mail ~ ".*@.*" then true else false', variables)
 ```
 
 **Pattern Matching**:
 ```python
-result = evaluator.evaluate('if user.username ~ "^[a-z]+$": return "Valid username"', variables)
-result = evaluator.evaluate('if user.mail ~ ".*@company\.com$": return "Company email"', variables)
+result = evaluator.evaluate('if user.username ~ "^[a-z]+$" then "Valid username" else "Invalid username"', variables)
+result = evaluator.evaluate('if user.mail ~ ".*@company\.com$" then "Company email" else "External email"', variables)
 ```
 
 **Configuration Logic**:
 ```javascript
-if user.title == "Manager" or user.department == "Executive": return "admin"
+if user.title == "Manager" or user.department == "Executive" then "admin" else "user"
 ```
