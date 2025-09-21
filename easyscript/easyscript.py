@@ -181,10 +181,16 @@ class EasyScriptEvaluator:
                 # as we either reached end of code or are at newline
                 continue
 
-            # Two-character operators
+            # Two-character operators and comments
             if i < len(code) - 1:
                 two_char = code[i:i+2]
-                if two_char in ['>=', '<=', '==', '!=']:
+                if two_char == '//':
+                    # JavaScript-style comment - skip everything after // until end of line
+                    while i < len(code) and code[i] != '\n':
+                        i += 1
+                    # Don't increment i again at the end of the loop
+                    continue
+                elif two_char in ['>=', '<=', '==', '!=']:
                     tokens.append(Token(TokenType.OPERATOR, two_char, i))
                     i += 2
                     continue
