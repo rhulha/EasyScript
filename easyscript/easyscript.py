@@ -346,14 +346,22 @@ class EasyScriptEvaluator:
         return left
 
     def parse_and_expression(self) -> Any:
-        left = self.parse_comparison()
+        left = self.parse_not_expression()
 
         while (self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'and'):
             self.consume_token()
-            right = self.parse_comparison()
+            right = self.parse_not_expression()
             left = left and right
 
         return left
+
+    def parse_not_expression(self) -> Any:
+        """Handle logical not operator with lower precedence than comparison operators"""
+        if self.current_token().type == TokenType.KEYWORD and self.current_token().value == 'not':
+            self.consume_token()
+            return not self.parse_not_expression()
+        else:
+            return self.parse_comparison()
 
     def parse_comparison(self) -> Any:
         left = self.parse_additive()
@@ -423,17 +431,13 @@ class EasyScriptEvaluator:
         return left
 
     def parse_unary(self) -> Any:
-        """Handle unary operators like negative numbers and logical not"""
+        """Handle unary operators like negative numbers"""
         token = self.current_token()
         
         if token.type == TokenType.OPERATOR and token.value == '-':
             self.consume_token()
             # Recursively parse the right side and negate it
             return -self.parse_unary()
-        elif token.type == TokenType.KEYWORD and token.value == 'not':
-            self.consume_token()
-            # Recursively parse the right side and apply logical not
-            return not self.parse_unary()
         else:
             return self.parse_primary()
 
